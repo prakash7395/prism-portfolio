@@ -1,16 +1,44 @@
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { TalkingAvatarView } from "@interviewflowai/talking-avatar/react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import "./App.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
+const NOVA_MORPH_TARGETS = {
+  viseme_sil: [],
+  viseme_PP: "PP",
+  viseme_FF: "FF",
+  viseme_TH: "TH",
+  viseme_DD: "DD",
+  viseme_kk: "kk",
+  viseme_CH: "CH",
+  viseme_SS: "SS",
+  viseme_nn: "nn",
+  viseme_RR: "RR",
+  viseme_aa: "aa",
+  viseme_E: "E",
+  viseme_I: "ih",
+  viseme_O: "oh",
+  viseme_U: "ou",
+  eyeBlinkLeft: "eyeBlinkLeft",
+  eyeBlinkRight: "eyeBlinkRight",
+  browInnerUp: "browInnerUp",
+  jawOpen: "jawOpen",
+  mouthPucker: "mouthPucker",
+  mouthFunnel: "mouthFunnel",
+  mouthRollLower: "mouthRollLower",
+  mouthClose: "mouthClose",
+  mouthPressLeft: "mouthPressLeft",
+  mouthPressRight: "mouthPressRight",
+};
+
 const profile = {
   name: "Prakash C",
   role: "Junior Full Stack Developer",
   location: "Ambur, India",
-  email: "",
   github: "https://github.com/prakash7395",
   linkedin: "https://www.linkedin.com/in/prakash-c-4946852ba/",
   repository: "https://github.com/prakash7395/CODSOFT_TASKSNO",
@@ -21,7 +49,7 @@ const projects = [
     number: "01",
     title: "Project Management Tool",
     description:
-      "A project management application built with React and Node.js technologies, focused on organizing projects and managing tasks.",
+      "A full-stack application for creating projects, assigning tasks, setting deadlines and tracking progress.",
     stack: ["React.js", "Node.js", "Express.js", "MongoDB"],
     category: "FULL STACK APPLICATION",
     className: "project-orange",
@@ -30,7 +58,7 @@ const projects = [
     number: "02",
     title: "Job Board",
     description:
-      "A web development project focused on presenting job listings through a clean and responsive interface.",
+      "A responsive job listing interface built to present opportunities through a clean and accessible experience.",
     stack: ["HTML5", "CSS3", "JavaScript"],
     category: "FRONTEND DEVELOPMENT",
     className: "project-blue",
@@ -39,7 +67,7 @@ const projects = [
     number: "03",
     title: "Interactive Calculator",
     description:
-      "An interactive calculator built using core web technologies with a focus on functionality and user interaction.",
+      "An interactive calculator created with core web technologies, focusing on functionality and user interaction.",
     stack: ["HTML5", "CSS3", "JavaScript"],
     category: "WEB APPLICATION",
     className: "project-lime",
@@ -78,17 +106,17 @@ const guideAnswers = [
   {
     keywords: ["who", "about", "prakash", "introduce"],
     answer:
-      "Prakash C is an aspiring Full Stack Developer from Ambur, India. He has a BCA degree and is building his development skills through practical projects and web development learning.",
+      "Prakash C is an aspiring Full Stack Developer from Ambur, India. He completed a BCA degree and is developing his skills through practical projects and structured web development learning.",
   },
   {
     keywords: ["project", "work", "portfolio"],
     answer:
-      "Prakash has worked on three featured projects: a Project Management Tool using React, Node.js, Express and MongoDB; a Job Board using HTML, CSS and JavaScript; and an Interactive Calculator using HTML, CSS and JavaScript. You can explore the source code through his GitHub repository.",
+      "Prakash's featured projects are a Project Management Tool built with React, Node.js, Express and MongoDB; a Job Board built with HTML, CSS and JavaScript; and an Interactive Calculator built with HTML, CSS and JavaScript.",
   },
   {
     keywords: ["skill", "technology", "tech stack", "know"],
     answer:
-      "His current development skills include HTML5, CSS3, JavaScript ES6+, React.js, Node.js, Express.js, REST APIs, MongoDB, Git, GitHub, VS Code and Postman.",
+      "His current skills include HTML5, CSS3, JavaScript ES6+, React.js, Node.js, Express.js, REST APIs, MongoDB, Git, GitHub, VS Code and Postman.",
   },
   {
     keywords: ["education", "degree", "college", "study"],
@@ -103,22 +131,22 @@ const guideAnswers = [
   {
     keywords: ["experience", "bank", "equitas", "idfc"],
     answer:
-      "Prakash has professional experience in banking. He worked as a Business Development Officer at Equitas Small Finance Bank from November 2024 to August 2025, and as a Deputy Manager at IDFC FIRST Bank from November 2025 to August 2026. These roles helped him develop communication, customer handling and professional skills.",
+      "Prakash worked as a Business Development Officer at Equitas Small Finance Bank from November 2024 to August 2025, and as a Deputy Manager at IDFC FIRST Bank from November 2025 to August 2026. These roles helped him develop communication, customer handling and professional skills.",
   },
   {
     keywords: ["github", "source code", "repository"],
     answer:
-      "You can explore Prakash's code and projects on GitHub at github.com/prakash7395. His CodSoft project repository is also linked in the Projects section.",
+      "You can explore Prakash's work at github.com/prakash7395. His CodSoft project repository is github.com/prakash7395/CODSOFT_TASKSNO.",
   },
   {
     keywords: ["linkedin", "contact", "connect", "hire"],
     answer:
-      "You can connect with Prakash through the LinkedIn and GitHub links in the Contact section. He is pursuing Junior Frontend Developer and Junior Full Stack Developer opportunities.",
+      "You can connect with Prakash through LinkedIn at linkedin.com/in/prakash-c-4946852ba/ or explore his GitHub profile. He is pursuing Junior Frontend Developer and Junior Full Stack Developer opportunities.",
   },
   {
     keywords: ["frontend", "front end"],
     answer:
-      "Prakash's frontend skills include HTML5, CSS3, JavaScript ES6+, React.js and responsive design. His projects demonstrate practical use of these technologies.",
+      "Prakash's frontend skills include HTML5, CSS3, JavaScript ES6+, React.js and responsive design.",
   },
   {
     keywords: ["backend", "back end", "server"],
@@ -126,28 +154,26 @@ const guideAnswers = [
       "Prakash is developing his backend skills with Node.js, Express.js, REST APIs and MongoDB. His Project Management Tool is a full-stack project using these technologies.",
   },
   {
-    keywords: ["nova", "you", "yourself"],
+    keywords: ["nova", "yourself"],
     answer:
       "I'm Nova, the AI guide inside PRISM. I help visitors explore Prakash's portfolio, understand his projects and discover his technical background. Ask me anything about his work!",
   },
 ];
 
 function getNovaFallback(message) {
-  const text = message.toLowerCase();
+  const normalized = message.toLowerCase();
 
   const match = guideAnswers.find((item) =>
-    item.keywords.some((keyword) => text.includes(keyword))
+    item.keywords.some((keyword) => normalized.includes(keyword))
   );
 
   return (
     match?.answer ||
-    "That's an interesting question! I can help you explore Prakash's projects, technical skills, education, internship and professional experience. Try asking me about one of those topics."
+    "I can help you explore Prakash's projects, technical skills, education, internship and professional experience. What would you like to know?"
   );
 }
 
-/* ---------------------------------
-   3D NEURAL NETWORK
----------------------------------- */
+/* 3D NEURAL NETWORK */
 
 function NeuralNetworkScene() {
   const groupRef = useRef(null);
@@ -181,15 +207,12 @@ function NeuralNetworkScene() {
 
         const distance = Math.sqrt(
           node.reduce(
-            (sum, value, axis) =>
-              sum + (value - other[axis]) ** 2,
+            (sum, value, axis) => sum + (value - other[axis]) ** 2,
             0
           )
         );
 
-        if (distance < 1.15) {
-          result.push([node, other]);
-        }
+        if (distance < 1.15) result.push([node, other]);
       });
     });
 
@@ -210,9 +233,9 @@ function NeuralNetworkScene() {
         <Line
           key={`connection-${index}`}
           points={connection}
-          color="#7185ed"
+          color="#c77b50"
           transparent
-          opacity={0.38}
+          opacity={0.32}
           lineWidth={1}
         />
       ))}
@@ -220,28 +243,22 @@ function NeuralNetworkScene() {
       {nodes.map((position, index) => (
         <mesh key={`node-${index}`} position={position}>
           <sphereGeometry
-            args={[index % 5 === 0 ? 0.075 : 0.045, 16, 16]}
+            args={[index % 5 === 0 ? 0.075 : 0.045, 12, 12]}
           />
           <meshStandardMaterial
-            color={
-              index % 5 === 0
-                ? "#52d9ed"
-                : index % 3 === 0
-                ? "#8864ef"
-                : "#526cf0"
-            }
-            emissive="#4059ed"
-            emissiveIntensity={0.55}
-            roughness={0.25}
-            metalness={0.3}
+            color={index % 5 === 0 ? "#e7a16f" : "#bd704b"}
+            emissive="#9c4e30"
+            emissiveIntensity={0.4}
+            roughness={0.3}
+            metalness={0.25}
           />
         </mesh>
       ))}
 
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[0.28, 32, 32]} />
+      <mesh>
+        <sphereGeometry args={[0.28, 24, 24]} />
         <meshBasicMaterial
-          color="#a5b4ff"
+          color="#e6ad83"
           transparent
           opacity={0.12}
         />
@@ -255,40 +272,34 @@ function NeuralNetworkVisual() {
     <div className="neural-visual">
       <Canvas
         camera={{ position: [0, 0, 5.5], fov: 45 }}
-        dpr={[1, 1.5]}
+        dpr={[1, 1.25]}
         gl={{ antialias: true, alpha: true }}
       >
-        <ambientLight intensity={1.5} />
-
-        <pointLight
-          position={[3, 3, 4]}
-          intensity={18}
-          color="#7185ff"
-        />
-
-        <pointLight
-          position={[-3, -2, 2]}
-          intensity={10}
-          color="#52d9ed"
-        />
-
+        <ambientLight intensity={1.4} />
+        <pointLight position={[3, 3, 4]} intensity={12} color="#d68a60" />
+        <pointLight position={[-3, -2, 2]} intensity={7} color="#e7b17f" />
         <NeuralNetworkScene />
       </Canvas>
     </div>
   );
 }
 
-/* ---------------------------------
-   EXISTING NOVA HOLOGRAM
----------------------------------- */
+/* NOVA HOLOGRAM */
 
-function NovaHologram({ speaking, listening, busy, compact = false }) {
+function NovaHologram({
+  speaking = false,
+  listening = false,
+  busy = false,
+  compact = false,
+}) {
   return (
     <div
       className={`nova-hologram ${compact ? "nova-hologram-compact" : ""} ${
         speaking ? "is-speaking" : ""
-      } ${listening ? "is-listening" : ""} ${busy ? "is-thinking" : ""}`}
-      aria-label="Nova holographic AI assistant"
+      } ${listening ? "is-listening" : ""} ${
+        busy ? "is-thinking" : ""
+      }`}
+      aria-label="Nova AI assistant"
     >
       <div className="holo-aura" />
       <div className="holo-orbit orbit-one" />
@@ -319,17 +330,16 @@ function NovaHologram({ speaking, listening, busy, compact = false }) {
   );
 }
 
-/* ---------------------------------
-   NOVA AI GUIDE
----------------------------------- */
+/* NOVA AI GUIDE */
 
-function NovaGuide() {
+function NovaGuide({ avatarRef }) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
 
   const [messages, setMessages] = useState([
     {
@@ -341,51 +351,75 @@ function NovaGuide() {
   const bottomRef = useRef(null);
   const recognitionRef = useRef(null);
   const busyRef = useRef(false);
-  const speakingRef = useRef(false);
+  const speechRequestRef = useRef(0);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open]);
+  }, [messages, open, busy]);
 
   useEffect(() => {
     return () => {
+      speechRequestRef.current += 1;
       window.speechSynthesis?.cancel();
-      recognitionRef.current?.stop();
+      avatarRef.current?.stopSpeaking?.();
+      recognitionRef.current?.abort?.();
     };
-  }, []);
+  }, [avatarRef]);
 
   function stopSpeech() {
+    speechRequestRef.current += 1;
     window.speechSynthesis?.cancel();
-    speakingRef.current = false;
+
+    try {
+      avatarRef.current?.stopSpeaking?.();
+    } catch (error) {
+      console.warn("Could not stop avatar speech:", error);
+    }
+
     setSpeaking(false);
   }
 
-  function speak(text) {
-    if (!voiceEnabled || !("speechSynthesis" in window)) return;
+  async function speak(text) {
+    if (!voiceEnabled || !text?.trim()) return;
 
     stopSpeech();
+    const requestId = speechRequestRef.current;
+    setVoiceError("");
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-IN";
-    utterance.rate = 0.96;
-    utterance.pitch = 1.05;
+    try {
+      const response = await fetch(`${API_URL}/api/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
 
-    utterance.onstart = () => {
-      speakingRef.current = true;
+      if (!response.ok) {
+        throw new Error(`Voice service returned ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+
+      if (requestId !== speechRequestRef.current) return;
+      if (!audioBlob.size) throw new Error("The voice service returned empty audio.");
+
+      const avatar = avatarRef.current;
+
+      if (!avatar?.speak) {
+        throw new Error("The 3D Nova avatar is not ready yet.");
+      }
+
       setSpeaking(true);
-    };
-
-    utterance.onend = () => {
-      speakingRef.current = false;
-      setSpeaking(false);
-    };
-
-    utterance.onerror = () => {
-      speakingRef.current = false;
-      setSpeaking(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
+      await avatar.speak(audioBlob);
+    } catch (error) {
+      if (requestId === speechRequestRef.current) {
+        console.error("Nova voice playback error:", error);
+        setVoiceError("Nova's voice is temporarily unavailable. You can still chat by text.");
+      }
+    } finally {
+      if (requestId === speechRequestRef.current) {
+        setSpeaking(false);
+      }
+    }
   }
 
   async function sendMessage(value = message) {
@@ -394,6 +428,7 @@ function NovaGuide() {
     if (!question || busyRef.current) return;
 
     stopSpeech();
+    setVoiceError("");
 
     setMessages((previous) => [
       ...previous,
@@ -406,33 +441,30 @@ function NovaGuide() {
 
     let reply = "";
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
+      const response = await fetch(`${API_URL}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: question }),
+        signal: controller.signal,
+      });
 
-      try {
-        const response = await fetch(`${API_URL}/api/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: question }),
-          signal: controller.signal,
-        });
+      if (!response.ok) throw new Error(`Chat service returned ${response.status}`);
 
-        if (!response.ok) throw new Error("AI server unavailable");
-
-        const data = await response.json();
-
-        reply =
-          data.reply ||
-          data.response ||
-          data.answer ||
-          getNovaFallback(question);
-      } finally {
-        clearTimeout(timeout);
-      }
+      const data = await response.json();
+      reply =
+        data.reply ||
+        data.response ||
+        data.answer ||
+        getNovaFallback(question);
     } catch (error) {
       console.warn("Nova API fallback:", error.message);
       reply = getNovaFallback(question);
+    } finally {
+      window.clearTimeout(timeoutId);
     }
 
     setMessages((previous) => [
@@ -442,7 +474,8 @@ function NovaGuide() {
 
     setBusy(false);
     busyRef.current = false;
-    speak(reply);
+
+    if (voiceEnabled) speak(reply);
   }
 
   function startListening() {
@@ -462,46 +495,67 @@ function NovaGuide() {
 
     stopSpeech();
 
-    const recognition = new SpeechRecognition();
+    try {
+      recognitionRef.current?.abort?.();
 
-    recognition.lang = "en-IN";
-    recognition.interimResults = false;
-    recognition.continuous = false;
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-IN";
+      recognition.interimResults = false;
+      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
 
-    recognitionRef.current = recognition;
+      recognitionRef.current = recognition;
 
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
+      recognition.onstart = () => setListening(true);
+      recognition.onend = () => setListening(false);
 
-    recognition.onerror = () => {
+      recognition.onerror = (event) => {
+        setListening(false);
+
+        if (event.error !== "aborted" && event.error !== "no-speech") {
+          setVoiceError("Microphone unavailable. Check browser permission and try again.");
+        }
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+
+        if (transcript) {
+          setMessage(transcript);
+          sendMessage(transcript);
+        }
+      };
+
+      recognition.start();
+    } catch (error) {
       setListening(false);
-    };
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setMessage(transcript);
-      sendMessage(transcript);
-    };
-
-    recognition.start();
+      setVoiceError("Could not start the microphone. Please try again.");
+      console.error("Nova microphone error:", error);
+    }
   }
 
   function toggleVoice() {
     if (voiceEnabled) {
       setVoiceEnabled(false);
       stopSpeech();
+      setVoiceError("");
     } else {
       setVoiceEnabled(true);
-
-      if ("speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(
-          "Voice responses are now enabled. Welcome to PRISM."
-        );
-
-        utterance.lang = "en-IN";
-        window.speechSynthesis.speak(utterance);
-      }
+      setVoiceError("");
     }
+  }
+
+  function closePanel() {
+    setOpen(false);
+    stopSpeech();
+
+    try {
+      recognitionRef.current?.abort?.();
+    } catch {
+      // Ignore an already stopped recognition session.
+    }
+
+    setListening(false);
   }
 
   return (
@@ -510,6 +564,7 @@ function NovaGuide() {
         className={`nova-launcher ${open ? "launcher-open" : ""}`}
         onClick={() => setOpen((value) => !value)}
         aria-label="Open Nova AI assistant"
+        aria-expanded={open}
       >
         <span className="launcher-hologram">
           <NovaHologram compact speaking={speaking} />
@@ -524,7 +579,7 @@ function NovaGuide() {
       </button>
 
       {open && (
-        <section className="nova-panel">
+        <section className="nova-panel" aria-label="Nova chat panel">
           <header className="nova-panel-header">
             <div className="nova-panel-identity">
               <div className="nova-mini-avatar">
@@ -556,16 +611,14 @@ function NovaGuide() {
                 className={`voice-toggle ${voiceEnabled ? "voice-active" : ""}`}
                 onClick={toggleVoice}
                 title="Toggle voice responses"
+                aria-pressed={voiceEnabled}
               >
                 {voiceEnabled ? "Voice ON" : "Voice OFF"}
               </button>
 
               <button
                 className="nova-close"
-                onClick={() => {
-                  setOpen(false);
-                  stopSpeech();
-                }}
+                onClick={closePanel}
                 aria-label="Close Nova"
               >
                 ×
@@ -579,14 +632,13 @@ function NovaGuide() {
               listening={listening}
               busy={busy}
             />
-
             <div>
               <strong>Meet Nova</strong>
               <p>Your intelligent guide to Prakash's work.</p>
             </div>
           </div>
 
-          <div className="nova-messages">
+          <div className="nova-messages" aria-live="polite">
             {messages.map((item, index) => (
               <div
                 className={`nova-message ${
@@ -597,7 +649,6 @@ function NovaGuide() {
                 {item.role === "nova" && (
                   <span className="message-avatar">N</span>
                 )}
-
                 <p>{item.text}</p>
               </div>
             ))}
@@ -605,7 +656,6 @@ function NovaGuide() {
             {busy && (
               <div className="nova-message assistant-message">
                 <span className="message-avatar">N</span>
-
                 <p className="typing-indicator">
                   <i />
                   <i />
@@ -617,11 +667,20 @@ function NovaGuide() {
             <div ref={bottomRef} />
           </div>
 
+          {voiceError && (
+            <p className="nova-voice-error" role="status">
+              {voiceError}
+            </p>
+          )}
+
           <div className="nova-suggestions">
             {[
               "Tell me about Prakash",
               "Show his projects",
               "Technical skills",
+              "Work experience",
+              "Education",
+              "Contact details",
             ].map((item) => (
               <button
                 key={item}
@@ -645,6 +704,7 @@ function NovaGuide() {
               className={`nova-mic ${listening ? "mic-active" : ""}`}
               onClick={startListening}
               title="Speak to Nova"
+              aria-label="Speak to Nova"
               disabled={busy}
             >
               {listening ? "●" : "🎙"}
@@ -676,9 +736,7 @@ function NovaGuide() {
   );
 }
 
-/* ---------------------------------
-   SECTION HEADING
----------------------------------- */
+/* SECTION HEADING */
 
 function SectionHeading({ eyebrow, title, description }) {
   return (
@@ -690,27 +748,37 @@ function SectionHeading({ eyebrow, title, description }) {
   );
 }
 
-/* ---------------------------------
-   MAIN APP
----------------------------------- */
+/* MAIN APP */
 
 function App() {
+  const novaAvatarRef = useRef(null);
+
   const [introVisible, setIntroVisible] = useState(() => {
-    return !sessionStorage.getItem("prism-intro-seen");
+    try {
+      return !sessionStorage.getItem("prism-intro-seen");
+    } catch {
+      return true;
+    }
   });
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
 
   useEffect(() => {
-    if (!introVisible) return;
+    if (!introVisible) return undefined;
 
-    const timer = setTimeout(() => {
+    // CSS intro exit starts at 3.8s and finishes at 4.6s.
+    const timer = window.setTimeout(() => {
       setIntroVisible(false);
-      sessionStorage.setItem("prism-intro-seen", "true");
-    }, 2800);
 
-    return () => clearTimeout(timer);
+      try {
+        sessionStorage.setItem("prism-intro-seen", "true");
+      } catch {
+        // The intro can still close if browser storage is unavailable.
+      }
+    }, 4600);
+
+    return () => window.clearTimeout(timer);
   }, [introVisible]);
 
   useEffect(() => {
@@ -719,9 +787,7 @@ function App() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
-          }
+          if (entry.isIntersecting) setActiveSection(entry.target.id);
         });
       },
       { threshold: 0.35 }
@@ -736,40 +802,68 @@ function App() {
     setMobileMenu(false);
   }
 
+  function dismissIntro() {
+    setIntroVisible(false);
+
+    try {
+      sessionStorage.setItem("prism-intro-seen", "true");
+    } catch {
+      // No action needed.
+    }
+  }
+
   return (
     <div className="site-shell">
       {introVisible && (
         <div className="cinematic-intro">
+          <div className="intro-noise" />
           <div className="intro-grid" />
-          <div className="intro-glow intro-glow-one" />
-          <div className="intro-glow intro-glow-two" />
+          <div className="intro-spotlight" />
+          <div className="intro-orbit intro-orbit-one" />
+          <div className="intro-orbit intro-orbit-two" />
 
           <div className="intro-content">
-            <div className="intro-symbol">
-              <span>P</span>
+            <div className="intro-topline">
+              <span>INDEPENDENT DEVELOPER PORTFOLIO</span>
+              <span>EST. 2026</span>
             </div>
 
-            <span className="intro-overline">A DIGITAL EXPERIENCE BY</span>
+            <div className="intro-monogram">
+              <span>P</span>
+              <i />
+            </div>
 
-            <h1>
+            <p className="intro-overline">
+              WELCOME TO THE DIGITAL WORLD OF
+            </p>
+
+            <h1 className="intro-title">
               PRISM<span>.</span>
             </h1>
 
-            <p>Personal. Responsive. Intelligent. Smart. Modern.</p>
-
-            <div className="intro-progress">
+            <div className="intro-divider">
               <span />
             </div>
+
+            <p className="intro-name">PRAKASH C.</p>
+
+            <p className="intro-description">
+              DESIGNING IDEAS. BUILDING EXPERIENCES. DEVELOPING THE FUTURE.
+            </p>
+
+            <button className="intro-enter" onClick={dismissIntro}>
+              <span>EXPLORE PORTFOLIO</span>
+              <span className="intro-enter-arrow">↗</span>
+            </button>
           </div>
 
-          <button
-            className="intro-skip"
-            onClick={() => {
-              setIntroVisible(false);
-              sessionStorage.setItem("prism-intro-seen", "true");
-            }}
-          >
-            Skip intro ↗
+          <div className="intro-bottomline">
+            <span>PERSONAL · RESPONSIVE · INTELLIGENT</span>
+            <span>SCROLL TO DISCOVER ↓</span>
+          </div>
+
+          <button className="intro-skip" onClick={dismissIntro}>
+            SKIP INTRO ↗
           </button>
         </div>
       )}
@@ -783,6 +877,7 @@ function App() {
           className="mobile-menu-toggle"
           onClick={() => setMobileMenu((value) => !value)}
           aria-label="Toggle navigation"
+          aria-expanded={mobileMenu}
         >
           {mobileMenu ? "×" : "☰"}
         </button>
@@ -832,18 +927,20 @@ function App() {
               <span className="hero-highlight">what's next.</span>
             </h1>
 
+            <p className="hero-role">JUNIOR FULL STACK DEVELOPER</p>
+
             <p className="hero-description">
-              Aspiring Full Stack Developer creating responsive web
-              experiences and practical applications with modern technologies.
+              I build responsive web applications and meaningful digital
+              experiences using modern frontend and backend technologies.
+              Turning ideas into functional products, one project at a time.
             </p>
 
             <div className="hero-actions">
               <a className="primary-button" href="#work">
                 Explore my work <span>↗</span>
               </a>
-
-              <a className="secondary-button" href="#about">
-                More about me <span>↓</span>
+              <a className="secondary-button" href="#contact">
+                Let's connect <span>↗</span>
               </a>
             </div>
 
@@ -854,36 +951,107 @@ function App() {
           </div>
 
           <div className="hero-visual">
-            <div className="hero-visual-card">
-              <div className="visual-topline">
-                <span>PRISM / DIGITAL IDENTITY</span>
-                <span>001 — 026</span>
-              </div>
-
-              <div className="hero-prism-art">
-                <div className="prism-ring ring-a" />
-                <div className="prism-ring ring-b" />
-                <div className="prism-ring ring-c" />
-
-                <div className="prism-diamond">
-                  <span />
+            <div className="developer-workspace">
+              <div className="workspace-topbar">
+                <div className="workspace-brand">
+                  <span className="workspace-brand-icon">✳</span>
+                  <span>PRISM.DEV</span>
                 </div>
-
-                <div className="prism-art-label">
-                  CREATIVE<br />DEVELOPMENT
+                <div className="workspace-window-controls">
+                  <i />
+                  <i />
+                  <i />
                 </div>
               </div>
 
-              <div className="visual-bottomline">
-                <strong>DESIGN. DEVELOP. CREATE.</strong>
-                <span>SCROLL TO EXPLORE ↓</span>
+              <div className="workspace-body">
+                <aside className="workspace-sidebar">
+                  <span className="sidebar-label">EXPLORER</span>
+                  <div className="sidebar-file active">
+                    <span>JS</span> App.jsx
+                  </div>
+                  <div className="sidebar-file">
+                    <span>CS</span> style.css
+                  </div>
+                  <div className="sidebar-file">
+                    <span>JS</span> server.js
+                  </div>
+                  <div className="sidebar-file">
+                    <span>DB</span> database
+                  </div>
+                  <div className="sidebar-divider" />
+                  <span className="sidebar-label">PROJECTS</span>
+                  <div className="sidebar-project">
+                    <span className="project-status-dot" />
+                    Portfolio
+                  </div>
+                  <div className="sidebar-project">
+                    <span className="project-status-dot" />
+                    Job Board
+                  </div>
+                  <div className="sidebar-project">
+                    <span className="project-status-dot" />
+                    Task Manager
+                  </div>
+                </aside>
+
+                <div className="workspace-editor">
+                  <div className="editor-tab">
+                    <span>JS</span> App.jsx
+                    <i />
+                  </div>
+
+                  <div className="editor-code">
+                    <div><span className="code-line">01</span> <span className="code-purple">const</span> <span className="code-blue">developer</span> = {"{"}</div>
+                    <div><span className="code-line">02</span> &nbsp;name: <span className="code-orange">"Prakash C"</span>,</div>
+                    <div><span className="code-line">03</span> &nbsp;role: <span className="code-orange">"Full Stack Developer"</span>,</div>
+                    <div><span className="code-line">04</span> &nbsp;skills: [</div>
+                    <div><span className="code-line">05</span> &nbsp;&nbsp;<span className="code-green">"React.js"</span>,</div>
+                    <div><span className="code-line">06</span> &nbsp;&nbsp;<span className="code-green">"Node.js"</span>,</div>
+                    <div><span className="code-line">07</span> &nbsp;&nbsp;<span className="code-green">"MongoDB"</span></div>
+                    <div><span className="code-line">08</span> &nbsp;]</div>
+                    <div><span className="code-line">09</span> {"}"};</div>
+                    <div className="code-empty"><span className="code-line">10</span></div>
+                    <div><span className="code-line">11</span> <span className="code-purple">function</span> <span className="code-blue">buildFuture</span>() {"{"}</div>
+                    <div><span className="code-line">12</span> &nbsp;<span className="code-purple">return</span> <span className="code-orange">"Keep creating."</span>;</div>
+                    <div><span className="code-line">13</span> {"}"}</div>
+                    <div className="code-cursor-line">
+                      <span className="code-line">14</span>
+                      <span className="code-cursor" />
+                    </div>
+                  </div>
+
+                  <div className="editor-statusbar">
+                    <span>● JavaScript React</span>
+                    <span>UTF-8</span>
+                    <span>Ln 14, Col 1</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="workspace-terminal">
+                <div className="terminal-heading">
+                  <span>TERMINAL</span>
+                  <span>OUTPUT</span>
+                  <span>PROBLEMS</span>
+                </div>
+                <div className="terminal-content">
+                  <span className="terminal-prompt">prakash@prism:~$</span>
+                  <span> npm run build</span>
+                  <p className="terminal-success">✓ Build completed successfully</p>
+                  <p className="terminal-ready">Ready to create something new_</p>
+                </div>
+              </div>
+
+              <div className="workspace-footer">
+                <span>✳ PRISM DEVELOPMENT ENVIRONMENT</span>
+                <span>ALL SYSTEMS READY</span>
               </div>
             </div>
 
             <div className="floating-note note-one">
               <span>✳</span> FULL STACK JOURNEY
             </div>
-
             <div className="floating-note note-two">
               <span>↗</span> ALWAYS LEARNING
             </div>
@@ -926,17 +1094,14 @@ function App() {
 
                   <div className="preview-content">
                     <span className="preview-number">{project.number}</span>
-
                     <div className="preview-art">
                       {project.number === "01" && (
                         <div className="dashboard-art">
                           <div className="dashboard-side" />
-
                           <div className="dashboard-main">
                             <i />
                             <i />
                             <i />
-
                             <div className="dashboard-bars">
                               <b />
                               <b />
@@ -959,7 +1124,6 @@ function App() {
                       {project.number === "03" && (
                         <div className="calculator-art">
                           <div className="calculator-screen">123 +</div>
-
                           <div className="calculator-keys">
                             {Array.from({ length: 12 }, (_, index) => (
                               <i key={index} />
@@ -968,7 +1132,6 @@ function App() {
                         </div>
                       )}
                     </div>
-
                     <span className="preview-category">{project.category}</span>
                   </div>
                 </div>
@@ -976,7 +1139,6 @@ function App() {
                 <div className="project-details">
                   <div className="project-heading-row">
                     <span>PROJECT {project.number}</span>
-
                     <a
                       href={profile.repository}
                       target="_blank"
@@ -1037,9 +1199,7 @@ function App() {
                   <span>✳ THINK. CONNECT. CREATE.</span>
                   <span>02 / 04</span>
                 </div>
-
                 <NeuralNetworkVisual />
-
                 <div className="neural-card-bottom">
                   <strong>CURIOUS BY NATURE</strong>
                   <span>IDEAS CONNECT HERE ↗</span>
@@ -1068,7 +1228,6 @@ function App() {
               <div className="journey-list">
                 <div className="journey-item">
                   <span className="journey-year">2021 — 2024</span>
-
                   <div>
                     <h3>Bachelor of Computer Applications</h3>
                     <p>Thiruvalluvar University, Vellore</p>
@@ -1077,7 +1236,6 @@ function App() {
 
                 <div className="journey-item">
                   <span className="journey-year">2024 — 2025</span>
-
                   <div>
                     <h3>Business Development Officer</h3>
                     <p>Equitas Small Finance Bank</p>
@@ -1086,7 +1244,6 @@ function App() {
 
                 <div className="journey-item">
                   <span className="journey-year">2025 — 2026</span>
-
                   <div>
                     <h3>Deputy Manager</h3>
                     <p>IDFC FIRST Bank</p>
@@ -1095,7 +1252,6 @@ function App() {
 
                 <div className="journey-item">
                   <span className="journey-year">SEP — OCT 2026</span>
-
                   <div>
                     <h3>Web Development Intern</h3>
                     <p>CodSoft · Completed internship</p>
@@ -1122,10 +1278,8 @@ function App() {
                   <span>0{index + 1}</span>
                   <span>✳</span>
                 </div>
-
                 <h3>{group.title}</h3>
                 <p>{group.description}</p>
-
                 <div className="skill-tags">
                   {group.skills.map((skill) => (
                     <span key={skill}>{skill}</span>
@@ -1137,7 +1291,6 @@ function App() {
 
           <div className="learning-strip">
             <span className="learning-icon">↗</span>
-
             <div>
               <strong>ALWAYS IN BUILD MODE</strong>
               <p>
@@ -1162,23 +1315,51 @@ function App() {
               </h2>
 
               <p>
-                An AI-powered guide to help you explore my projects,
-                technologies and professional journey. Ask a question
-                and discover more.
+                Meet Nova, an AI-powered portfolio companion. Ask about
+                Prakash's projects, technologies and professional journey
+                through an interactive conversation.
               </p>
+
+              <div className="nova-feature-points">
+                <span>01 / Ask questions</span>
+                <span>02 / Explore projects</span>
+                <span>03 / Hear Nova speak</span>
+              </div>
 
               <button
                 className="primary-button"
-                onClick={() =>
-                  document.querySelector(".nova-launcher")?.click()
-                }
+                onClick={() => {
+                  document.querySelector(".nova-launcher")?.click();
+                }}
               >
                 Start a conversation <span>↗</span>
               </button>
             </div>
 
             <div className="nova-feature-visual">
-              <NovaHologram />
+              <div className="nova-avatar-label">
+                <span className="launcher-status" />
+                NOVA IS READY
+              </div>
+
+              <div className="nova-real-avatar">
+                <TalkingAvatarView
+                  ref={novaAvatarRef}
+                  avatarUrl="/nova.glb"
+                  modelUrl="/viseme-model.bin"
+                  morphTargets={NOVA_MORPH_TARGETS}
+                  status="listening"
+                  onError={(error) => {
+                    console.error("Nova avatar loading error:", error);
+                  }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    background: "transparent",
+                  }}
+                />
+              </div>
+
               <span className="nova-feature-caption">
                 NOVA / AI COMPANION
               </span>
@@ -1193,7 +1374,6 @@ function App() {
             <span className="section-eyebrow">
               HAVE A PROJECT IN MIND? / 05
             </span>
-
             <span>LET'S MAKE IT HAPPEN ↗</span>
           </div>
 
@@ -1232,29 +1412,23 @@ function App() {
             <a href={profile.linkedin} target="_blank" rel="noreferrer">
               LINKEDIN ↗
             </a>
-
             <a href={profile.github} target="_blank" rel="noreferrer">
               GITHUB ↗
             </a>
-
             <span>AMBUR, INDIA</span>
           </div>
         </section>
       </main>
 
-      {/* FOOTER */}
-
       <footer className="site-footer">
         <a className="brand-mark" href="#home">
           P<span>RISM.</span>
         </a>
-
         <p>Designed & developed by Prakash C.</p>
-
         <span>© 2026 · ALL RIGHTS RESERVED</span>
       </footer>
 
-      <NovaGuide />
+      <NovaGuide avatarRef={novaAvatarRef} />
     </div>
   );
 }

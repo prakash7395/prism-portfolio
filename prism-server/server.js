@@ -15,12 +15,19 @@ app.disable("x-powered-by");
 const localOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  "http://localhost:5177",
+  "http://localhost:5178",
   "http://127.0.0.1:5173",
   "http://127.0.0.1:5174",
+  "http://127.0.0.1:5175",
+  "http://127.0.0.1:5176",
+  "http://127.0.0.1:5177",
+  "http://127.0.0.1:5178",
 ];
 
-// Production frontend URLs.
-// Supports one or multiple URLs separated by commas.
+// Production frontend URLs
 const productionOrigins = [
   process.env.FRONTEND_URL,
   ...(process.env.FRONTEND_URLS || "").split(","),
@@ -47,6 +54,7 @@ app.use(
 
 app.use(express.json({ limit: "10kb" }));
 
+// Gemini AI configuration
 const ai = process.env.GEMINI_API_KEY
   ? new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
@@ -172,7 +180,7 @@ function getNovaFallback(message) {
 }
 
 /* =========================================
-   GEMINI RESPONSE
+   GEMINI CHAT RESPONSE
 ========================================= */
 
 async function askGemini(message) {
@@ -181,7 +189,7 @@ async function askGemini(message) {
   }
 
   const response = await ai.models.generateContent({
-    model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    model: process.env.GEMINI_MODEL || "gemini-3.8-flash",
     contents: [
       {
         role: "user",
@@ -215,7 +223,7 @@ ${message}
     ],
     config: {
       temperature: 0.5,
-      maxOutputTokens: 250,
+      maxOutputTokens: 120,
     },
   });
 
@@ -238,6 +246,7 @@ app.get("/api/health", (req, res) => {
     application: "PRISM Portfolio API",
     assistant: "Nova",
     aiEnabled: Boolean(ai),
+    ttsEnabled: Boolean(ai),
     mode: ai ? "Gemini + local fallback" : "Local fallback",
     timestamp: new Date().toISOString(),
   });
@@ -273,7 +282,7 @@ app.post("/api/chat", async (req, res) => {
         reply = await askGemini(cleanMessage);
         source = "gemini";
       } catch (error) {
-        console.error("Gemini error:", error.message);
+        console.error("Gemini chat error:", error.message);
         reply = getNovaFallback(cleanMessage);
       }
     } else {
@@ -289,6 +298,92 @@ app.post("/api/chat", async (req, res) => {
 
     return res.status(500).json({
       error: "Nova is temporarily unavailable. Please try again.",
+    });
+  }
+});
+
+/* =========================================
+   NOVA TEXT-TO-SPEECH API
+========================================= */
+
+app.post("/api/tts", async (req, res) => {
+  try {
+    const { text } = req.body ?? {};
+
+    if (typeof text !== "string" || !text.trim()) {
+      return res.status(400).json({
+        error: "Text is required.",
+      });
+    }
+
+    const cleanText = text.trim();
+
+    if (cleanText.length > 1000) {
+      return res.status(400).json({
+        error: "Text must be 1000 characters or less.",
+      });
+    }
+
+    if (!ai) {
+      return res.status(503).json({
+        error: "Gemini API is not configured.",
+      });
+    }
+
+    const interaction = await ai.interactions.create({
+      model: process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts",
+
+      input: [
+        {
+          type: "user_input",
+          content: [
+            {
+              type: "text",
+              text: cleanText,
+              annotations: [
+                {
+                  type: "speech_metadata",
+                  style: "Warm, friendly, natural Indian English. Clear and expressive.",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+
+      response_format: {
+        type: "audio",
+      },
+
+      generation_config: {
+        speech_config: [
+         {
+           voice: "Charon"
+         }
+        ],
+      },
+    });
+
+    const audioData = interaction.output_audio?.data;
+
+    if (!audioData) {
+      throw new Error("Gemini did not return audio.");
+    }
+
+    const audioBuffer = Buffer.from(audioData, "base64");
+
+    res.set({
+      "Content-Type": interaction.output_audio.mime_type || "audio/wav",
+      "Content-Length": audioBuffer.length,
+      "Cache-Control": "no-store",
+    });
+
+    return res.send(audioBuffer);
+  } catch (error) {
+    console.error("Nova TTS error:", error);
+
+    return res.status(502).json({
+      error: "Nova voice generation failed.",
     });
   }
 });
